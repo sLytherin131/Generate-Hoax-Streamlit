@@ -1,13 +1,13 @@
 import streamlit as st
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+from keras.models import load_model
+from keras.preprocessing.sequence import pad_sequences
 import numpy as np
 import pickle
 
 # --- Fungsi Cache ---
 @st.cache_resource
 def load_hoax_model():
-    return load_model("hoax_lstm_model.h5")  # Ganti ke .h5
+    return load_model("hoax_model.h5")  # Pastikan nama dan path benar
 
 @st.cache_resource
 def load_tokenizer():
@@ -41,11 +41,9 @@ def generate_hoax_from_word(seed_word, tokenizer, model, max_seq_len, max_words=
 
 # --- UI Streamlit ---
 st.set_page_config(page_title="Hoax Generator", layout="centered")
-
 st.title("🧠 Hoax Text Generator")
 st.markdown("Masukkan satu kata, dan model akan mengembangkan menjadi kalimat bernuansa hoax (untuk keperluan edukasi).")
 
-# Load model dan tokenizer
 try:
     model = load_hoax_model()
     tokenizer = load_tokenizer()
@@ -54,7 +52,6 @@ except Exception as e:
     st.error(f"Gagal memuat model/tokenizer. Pastikan file `.h5` dan `tokenizer_hoax.pkl` tersedia.\n\nError: {e}")
     st.stop()
 
-# Input dan tombol
 seed_word = st.text_input("📝 Masukkan kata awal:", "")
 temperature = st.slider("🎛️ Suhu kreativitas (temperature)", 0.2, 1.5, 0.8, 0.1)
 
