@@ -7,7 +7,7 @@ import pickle
 # --- Fungsi Cache ---
 @st.cache_resource
 def load_hoax_model():
-    return load_model("hoax_lstm_model.keras")
+    return load_model("hoax_lstm_model.h5")  # Ganti ke .h5
 
 @st.cache_resource
 def load_tokenizer():
@@ -51,7 +51,7 @@ try:
     tokenizer = load_tokenizer()
     max_seq_len = model.input_shape[1] + 1
 except Exception as e:
-    st.error(f"Gagal memuat model/tokenizer. Pastikan file `.keras` dan `tokenizer_hoax.pkl` tersedia.\n\nError: {e}")
+    st.error(f"Gagal memuat model/tokenizer. Pastikan file `.h5` dan `tokenizer_hoax.pkl` tersedia.\n\nError: {e}")
     st.stop()
 
 # Input dan tombol
