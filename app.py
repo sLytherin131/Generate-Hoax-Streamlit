@@ -1,9 +1,8 @@
 import streamlit as st
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-from tensorflow.keras.preprocessing.text import tokenizer_from_json
 import numpy as np
-import json
+import pickle
 
 # --- Fungsi Cache ---
 @st.cache_resource
@@ -12,9 +11,9 @@ def load_hoax_model():
 
 @st.cache_resource
 def load_tokenizer():
-    with open("tokenizer_hoax.json") as f:
-        tokenizer_json = json.load(f)
-    return tokenizer_from_json(tokenizer_json)
+    with open("tokenizer_hoax.pkl", "rb") as f:
+        tokenizer = pickle.load(f)
+    return tokenizer
 
 # --- Fungsi Sampling Kata ---
 def sample_word(preds, temperature=1.0):
@@ -52,7 +51,7 @@ try:
     tokenizer = load_tokenizer()
     max_seq_len = model.input_shape[1] + 1
 except Exception as e:
-    st.error(f"Gagal memuat model/tokenizer. Pastikan file `.keras` dan `tokenizer_hoax.json` tersedia.\n\nError: {e}")
+    st.error(f"Gagal memuat model/tokenizer. Pastikan file `.keras` dan `tokenizer_hoax.pkl` tersedia.\n\nError: {e}")
     st.stop()
 
 # Input dan tombol
