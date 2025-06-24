@@ -7,7 +7,7 @@ import pickle
 # --- Fungsi Cache ---
 @st.cache_resource
 def load_hoax_model():
-    return load_model("hoax_model.h5")  # Pastikan nama dan path benar
+    return load_model("hoax_lstm_model.h5")  # Pastikan nama dan path benar
 
 @st.cache_resource
 def load_tokenizer():
