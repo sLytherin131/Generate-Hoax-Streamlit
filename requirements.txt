@@ -1,4 +1,3 @@
 streamlit
-tensorflow==2.12.0
+keras==3.3.2
 numpy
-pickle-mixin
