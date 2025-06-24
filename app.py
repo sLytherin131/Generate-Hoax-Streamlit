@@ -1,55 +1,69 @@
 import streamlit as st
-import pickle
-from keras.models import load_model
-from utils import generate_hoax_from_word, extract_spok
-
+from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.preprocessing.text import tokenizer_from_json
+import numpy as np
+import json
 
-# ========================
-# Load model dan tokenizer
-# ========================
+# --- Fungsi Cache ---
 @st.cache_resource
-def load_model_and_tokenizer():
-    model = load_model('hoax_lstm_model.h5')
-    with open('tokenizer_hoax.pkl', 'rb') as f:
-        tokenizer = pickle.load(f)
-    return model, tokenizer
+def load_hoax_model():
+    return load_model("hoax_lstm_model.keras")
 
-model, tokenizer = load_model_and_tokenizer()
-max_seq_len = model.input_shape[1] + 1
+@st.cache_resource
+def load_tokenizer():
+    with open("tokenizer_hoax.json") as f:
+        tokenizer_json = json.load(f)
+    return tokenizer_from_json(tokenizer_json)
 
-# ========================
-# UI Streamlit
-# ========================
-st.set_page_config(page_title="AI Hoax Generator", layout="centered")
-st.title("🧠 AI Hoax Generator Bahasa Indonesia")
-st.write("Masukkan satu kata awal, dan sistem akan mengarang kalimat hoax tiruan berdasarkan model LSTM.")
-st.write("Setelah itu, sistem juga akan menampilkan analisis SPOK-nya.")
+# --- Fungsi Sampling Kata ---
+def sample_word(preds, temperature=1.0):
+    preds = np.asarray(preds).astype('float64')
+    preds = np.log(preds + 1e-10) / temperature
+    exp_preds = np.exp(preds)
+    preds = exp_preds / np.sum(exp_preds)
+    probas = np.random.multinomial(1, preds, 1)
+    return np.argmax(probas)
 
-seed_word = st.text_input("🔤 Masukkan Kata Awal (contoh: 'mata')", "")
+# --- Fungsi Generate Kalimat ---
+def generate_hoax_from_word(seed_word, tokenizer, model, max_seq_len, max_words=10, temperature=0.8):
+    seed_text = seed_word.lower()
+    output_text = seed_text
+    for _ in range(max_words):
+        token_list = tokenizer.texts_to_sequences([output_text])[0]
+        token_list = pad_sequences([token_list], maxlen=max_seq_len - 1, padding='pre')
+        preds = model.predict(token_list, verbose=0)[0]
+        predicted_index = sample_word(preds, temperature)
+        predicted_word = tokenizer.index_word.get(predicted_index, '')
+        if predicted_word == '' or predicted_word == '<OOV>':
+            break
+        output_text += ' ' + predicted_word
+    return output_text
 
-temperature = st.slider("🎚️ Temperatur (kreativitas):", min_value=0.2, max_value=1.5, value=0.8, step=0.1)
+# --- UI Streamlit ---
+st.set_page_config(page_title="Hoax Generator", layout="centered")
 
-if st.button("🚀 Generate Hoax"):
-    if seed_word.strip() == "":
-        st.warning("Silakan isi kata awal terlebih dahulu.")
+st.title("🧠 Hoax Text Generator")
+st.markdown("Masukkan satu kata, dan model akan mengembangkan menjadi kalimat bernuansa hoax (untuk keperluan edukasi).")
+
+# Load model dan tokenizer
+try:
+    model = load_hoax_model()
+    tokenizer = load_tokenizer()
+    max_seq_len = model.input_shape[1] + 1
+except Exception as e:
+    st.error(f"Gagal memuat model/tokenizer. Pastikan file `.keras` dan `tokenizer_hoax.json` tersedia.\n\nError: {e}")
+    st.stop()
+
+# Input dan tombol
+seed_word = st.text_input("📝 Masukkan kata awal:", "")
+temperature = st.slider("🎛️ Suhu kreativitas (temperature)", 0.2, 1.5, 0.8, 0.1)
+
+if st.button("🔮 Generate"):
+    if not seed_word.strip():
+        st.warning("Masukkan setidaknya satu kata.")
     else:
-        with st.spinner("Sedang menghasilkan hoax..."):
-            generated = generate_hoax_from_word(
-                seed_word, tokenizer, model, max_seq_len,
-                max_words=15, temperature=temperature
-            )
-            st.success("✅ Kalimat berhasil dihasilkan!")
-            st.subheader("📝 Kalimat Hoax:")
-            st.write(generated)
-
-            st.subheader("🔍 Analisis SPOK:")
-            spok_results = extract_spok(generated)
-            for i, item in enumerate(spok_results):
-                st.markdown(f"**Kalimat {i+1}:** {item['kalimat']}")
-                st.write({
-                    "Subjek": item['subjek'],
-                    "Predikat": item['predikat'],
-                    "Objek": item['objek'],
-                    "Keterangan": item['keterangan']
-                })
+        with st.spinner("Menghasilkan teks hoax..."):
+            result = generate_hoax_from_word(seed_word, tokenizer, model, max_seq_len, temperature=temperature)
+            st.success("✅ Teks Berhasil Dihasilkan:")
+            st.markdown(f"**{result}**")
