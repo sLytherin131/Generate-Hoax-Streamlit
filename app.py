@@ -6,13 +6,21 @@ import pickle
 
 @st.cache_resource
 def load_hoax_model():
-    return load_model("hoax_lstm_model.h5")
+    try:
+        return load_model("hoax_lstm_model.h5", compile=False)
+    except Exception as e:
+        st.error(f"❌ Gagal memuat model: {e}")
+        st.stop()
 
 @st.cache_resource
 def load_tokenizer():
-    with open("tokenizer_hoax.pkl", "rb") as f:
-        tokenizer = pickle.load(f)
-    return tokenizer
+    try:
+        with open("tokenizer_hoax.pkl", "rb") as f:
+            tokenizer = pickle.load(f)
+        return tokenizer
+    except Exception as e:
+        st.error(f"❌ Gagal memuat tokenizer: {e}")
+        st.stop()
 
 def sample_word(preds, temperature=1.0):
     preds = np.asarray(preds).astype('float64')
@@ -36,17 +44,14 @@ def generate_hoax_from_word(seed_word, tokenizer, model, max_seq_len, max_words=
         output_text += ' ' + predicted_word
     return output_text
 
+# UI
 st.set_page_config(page_title="Hoax Generator", layout="centered")
 st.title("🧠 Hoax Text Generator")
 st.markdown("Masukkan satu kata, dan model akan mengembangkan menjadi kalimat bernuansa hoax (untuk keperluan edukasi).")
 
-try:
-    model = load_hoax_model()
-    tokenizer = load_tokenizer()
-    max_seq_len = model.input_shape[1] + 1
-except Exception as e:
-    st.error(f"Gagal memuat model/tokenizer. Pastikan file `.h5` dan `tokenizer_hoax.pkl` tersedia.\n\nError: {e}")
-    st.stop()
+model = load_hoax_model()
+tokenizer = load_tokenizer()
+max_seq_len = model.input_shape[1] + 1
 
 seed_word = st.text_input("📝 Masukkan kata awal:", "")
 temperature = st.slider("🎛️ Suhu kreativitas (temperature)", 0.2, 1.5, 0.8, 0.1)
